@@ -2,13 +2,13 @@ package main
 
 import (
 	"github.com/gofiber/fiber/v3"
-	handler "lasseaakjaer.com/musicbuzz/api"
+	"lasseaakjaer.com/musicbuzz/api"
 )
 
 func main() {
 	app := fiber.New()
 
-	app.Get("/", handler.Handler)
+	app.Get("/", api.Handler)
 
 	app.Listen(":3000")
 }
