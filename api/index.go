@@ -1,45 +1,35 @@
-package handler
+package api
 
 import (
-	"fmt"
-	"net/http"
+	"os"
 
-	. "github.com/tbxark/g4vercel"
+	spotifyauth "github.com/zmb3/spotify/v2/auth"
 )
 
-func Handler(w http.ResponseWriter, r *http.Request) {
-	server := New()
-
-	server.GET("/", func(context *Context) {
-		context.JSON(200, H{
-			"message": "hello go from vercel !!!!",
-		})
-	})
-	server.GET("/hello", func(context *Context) {
-		name := context.Query("name")
-		if name == "" {
-			context.JSON(400, H{
-				"message": "name not found",
-			})
-		} else {
-			context.JSON(200, H{
-				"data": fmt.Sprintf("Hello %s!", name),
-			})
-		}
-	})
-	server.GET("/user/:id", func(context *Context) {
-		context.JSON(400, H{
-			"data": H{
-				"id": context.Param("id"),
-			},
-		})
-	})
-	server.GET("/long/long/long/path/*test", func(context *Context) {
-		context.JSON(200, H{
-			"data": H{
-				"url": context.Path,
-			},
-		})
-	})
-	server.Handle(w, r)
+type Config struct {
+	SpotifyID     string `env:"SPOTIFY_ID"`
+	SpotifySecret string `env:"SPOTIFY_SECRET"`
+	RedirectUri   string `env:"REDIRECT_URI" envDefault:"http://localhost:8080/api/callback"`
 }
+
+type GlobalConfig struct {
+	auth *spotifyauth.Authenticator
+	// ch    chan *spotify.Client
+	state string
+}
+
+var authConfig = GlobalConfig{
+	auth: spotifyauth.New(spotifyauth.WithRedirectURL(os.Getenv("REDIRECT_URI")), spotifyauth.WithScopes(spotifyauth.ScopeUserReadPrivate)),
+	// ch:    make(chan *spotify.Client),
+	state: "34fFs29kd09",
+}
+
+// var Config Config
+// if err := envconfig.Process(ctx, &Config); err != nil {
+// 	panic(err) // TODO: handle error
+// }
+
+// var ENV = Config{
+// SpotifyID:     os.Getenv("SPOTIFY_ID"),
+// SpotifySecret: os.Getenv("SPOTIFY_SECRET"),
+// }
