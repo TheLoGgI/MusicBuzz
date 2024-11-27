@@ -2,6 +2,8 @@
 
 ## Development
 
+Export envs' in .env
+
 **Run React App**
 
 ```
@@ -13,6 +15,12 @@ cd app && pnpm dev
 ```
 go run main.go
 ```
+
+## API's
+
+Testing api with Postman for websocket you need to set the Origin Header to the Domain of the api.
+
+- Connect to Websocket
 
 ## Production
 
