@@ -23,15 +23,14 @@ import (
 // THE API WILL BE HOSTED ON VERCEL THAT ONLY ALLOWS FOR SPECIFIC ROUTE FORMAT.
 
 func main() {
-	// godotenv.Load()
-
 	route := Route{
 		router: &http.ServeMux{},
 	}
 
 	server := &http.Server{
 		Addr:    ":8080",
-		Handler: route.router,
+		Handler: corsMiddleware(route.router),
+		// TLSConfig: &tls.Config{},
 	}
 
 	// Hosting on vercel means that every endpoint is run serverless, from the api folder. /api/something
@@ -50,8 +49,11 @@ func main() {
 	// 	ws.
 	// }))
 	wsServer := ws.CreateServer()
-	route.ws(fmt.Sprintf("/ws"), wsServer.AddWebSocketHandler)
+	route.ws("/ws", wsServer.AddWebSocketHandler)
 	route.get("/send-response", wsServer.SendGroupMessageHandler)
+	route.post("/group", wsServer.GetGroupMembers)
+
+	// http.ListenAndServe(":8080", route.router)
 
 	go func() {
 		if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
@@ -97,6 +99,34 @@ func (route Route) get(pattern string, handler http.HandlerFunc) {
 		route.methodeAllowed(http.MethodGet)
 
 		handler(w, r)
+	})
+}
+
+func (route Route) post(pattern string, handler http.HandlerFunc) {
+	route.router.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
+		route.res = w
+		route.req = *r
+		route.methodeAllowed(http.MethodPost)
+
+		handler(w, r)
+	})
+}
+
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Set CORS headers
+		w.Header().Set("Access-Control-Allow-Origin", "*") // Change '*' to a specific origin for better security
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		// Handle preflight requests
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		// Pass the request to the next handler
+		next.ServeHTTP(w, r)
 	})
 }
 
@@ -179,16 +209,6 @@ func mapCookieHeader(cookieString string) map[string]string {
 	return cookieMap
 }
 
-// func (route Route) post(pattern string, handler http.HandlerFunc) {
-// 	route.router.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
-// 		route.res = w
-// 		route.req = *r
-// 		route.methodeAllowed(http.MethodPost)
-
-// 		handler(w, r)
-// 	})
-// }
-
 func (route Route) group(pattern string, handler http.Handler) {
 	route.router.Handle(pattern, handler)
 }
@@ -197,6 +217,12 @@ func (route Route) methodeAllowed(methode string) {
 	if route.req.Method != methode {
 		http.Error(route.res, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 	}
+}
+
+func (route Route) allowCORS() {
+	route.res.Header().Set("Access-Control-Allow-Origin", "*")
+	route.res.Header().Set("Access-Control-Allow-Methods", "*")
+	route.res.Header().Set("Access-Control-Allow-Headers", "*")
 }
 
 // const redirectURI = "http://localhost:8080/api/callback"
